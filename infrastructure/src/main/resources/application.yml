@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: notification-service
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+server:
+  port: ${SERVER_PORT:8087}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+
+app:
+  notification:
+    from-email: ${MAIL_FROM:noreply@fiapx.com}
+    notify-on-processed: ${NOTIFY_ON_PROCESSED:false}
+
+aws:
+  region: ${AWS_REGION:us-east-1}
+  access-key-id: ${AWS_ACCESS_KEY_ID:test}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY:test}
+  endpoint-override: ${AWS_ENDPOINT_OVERRIDE:}
+  sqs:
+    enabled: ${AWS_SQS_ENABLED:false}
+    polling:
+      fixed-delay-ms: ${AWS_SQS_POLLING_DELAY_MS:3000}
+    queues:
+      video-events: ${SQS_QUEUE_VIDEO_EVENTS:http://localhost:4566/000000000000/video-events}
+
+logging:
+  level:
+    br.com.fiap: INFO
+    org.springframework: WARN
+
+auth:
+  lambda:
+    url: ${AUTH_LAMBDA_URL:}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  mail:
+    host: localhost
+    port: 3025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+aws:
+  sqs:
+    enabled: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+aws:
+  sqs:
+    enabled: ${AWS_SQS_ENABLED:true}
+  endpoint-override: ${AWS_ENDPOINT_OVERRIDE:http://fiap-localstack:4566}

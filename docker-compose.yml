@@ -1,0 +1,51 @@
+version: '3.8'
+name: ms-notification
+
+services:
+
+  notification-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notification-api
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8087
+      AWS_SQS_ENABLED: "true"
+      AWS_ENDPOINT_OVERRIDE: http://fiap-localstack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      SQS_QUEUE_VIDEO_EVENTS: http://fiap-localstack:4566/000000000000/video-events
+      MAIL_HOST: fiap-mailhog
+      MAIL_PORT: 1025
+      MAIL_FROM: noreply@fiapx.com
+      NOTIFY_ON_PROCESSED: "true"
+      NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY:-}
+      NEW_RELIC_APP_NAME: notification-ms-local
+    ports:
+      - "8087:8087"
+    depends_on:
+      - mailhog
+    networks:
+      - app-network
+      - fiap-network
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: fiap-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - app-network
+      - fiap-network
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
+  fiap-network:
+    external: true
+    name: fiap-network

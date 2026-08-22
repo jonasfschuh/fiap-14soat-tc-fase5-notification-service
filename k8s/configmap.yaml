@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+data:
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_VHOST: fiapx
+  RABBITMQ_USER: fiapx
+  RABBITMQ_PASSWORD: fiapx123
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notification-config
+data:
+  MAIL_HOST: mailhog
+  MAIL_PORT: "1025"
+  MAIL_FROM: noreply@fiapx.com
+  AUTH_SERVICE_URL: http://auth-service:8090
+  NOTIFY_ON_PROCESSED: "true"

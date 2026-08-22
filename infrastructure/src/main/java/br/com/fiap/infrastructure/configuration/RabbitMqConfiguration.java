@@ -1,0 +1,48 @@
+package br.com.fiap.infrastructure.configuration;
+
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMqConfiguration {
+
+    public static final String VIDEO_EVENTS_EXCHANGE = "video.events";
+    public static final String VIDEO_EVENTS_QUEUE = "video-events";
+    public static final String VIDEO_EVENTS_DLQ = "video-events-dlq";
+
+    @Bean
+    public TopicExchange videoEventsExchange() {
+        return new TopicExchange(VIDEO_EVENTS_EXCHANGE, true, false);
+    }
+
+    @Bean
+    public Queue videoEventsQueue() {
+        return QueueBuilder.durable(VIDEO_EVENTS_QUEUE)
+                .deadLetterExchange("")
+                .deadLetterRoutingKey(VIDEO_EVENTS_DLQ)
+                .build();
+    }
+
+    @Bean
+    public Queue videoEventsDlq() {
+        return QueueBuilder.durable(VIDEO_EVENTS_DLQ).build();
+    }
+
+    @Bean
+    public Binding videoEventsBinding() {
+        return BindingBuilder.bind(videoEventsQueue())
+                .to(videoEventsExchange())
+                .with("#");
+    }
+
+    @Bean
+    public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+}

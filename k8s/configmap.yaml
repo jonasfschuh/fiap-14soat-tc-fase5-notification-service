@@ -14,7 +14,7 @@ kind: ConfigMap
 metadata:
   name: notification-config
 data:
-  MAIL_HOST: mailhog
+  MAIL_HOST: mailhog.fiapx.svc.cluster.local
   MAIL_PORT: "1025"
   MAIL_FROM: noreply@fiapx.com
   AUTH_SERVICE_URL: http://auth-service:8090

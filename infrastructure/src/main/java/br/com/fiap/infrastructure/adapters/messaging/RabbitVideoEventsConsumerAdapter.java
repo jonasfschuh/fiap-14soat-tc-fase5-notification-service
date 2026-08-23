@@ -4,10 +4,13 @@ import br.com.fiap.domain.model.NotificationResult;
 import br.com.fiap.domain.model.VideoNotificationEvent;
 import br.com.fiap.domain.ports.in.SendNotificationInputPort;
 import br.com.fiap.infrastructure.configuration.RabbitMqConfiguration;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 /** Consome eventos video-events do RabbitMQ e envia notificações por e-mail. */
@@ -26,9 +29,15 @@ public class RabbitVideoEventsConsumerAdapter {
     }
 
     @RabbitListener(queues = RabbitMqConfiguration.VIDEO_EVENTS_QUEUE)
-    public void onVideoEvent(String message) {
+    public void onVideoEvent(
+            String message,
+            @Header(name = AmqpHeaders.RECEIVED_EXCHANGE, required = false) String exchange,
+            @Header(name = AmqpHeaders.RECEIVED_ROUTING_KEY, required = false) String routingKey) {
         try {
-            log.debug("[RabbitMQ] Received video-events message");
+            log.info(">>> Payload recebido ao RabbitMQ — exchange [{}] routing-key [{}]:\n{}",
+                    exchange != null ? exchange : "unknown",
+                    routingKey != null ? routingKey : "unknown",
+                    formatPayload(message));
             VideoNotificationEvent event = objectMapper.readValue(message, VideoNotificationEvent.class);
             log.info("[RabbitMQ] Processing notification for videoId={} type={}",
                     event.getVideoId(), event.getEventType());
@@ -43,6 +52,15 @@ public class RabbitVideoEventsConsumerAdapter {
         } catch (Exception e) {
             log.error("[RabbitMQ] Error processing video-events message: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to process video-events message", e);
+        }
+    }
+
+    private String formatPayload(String message) {
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(objectMapper.readTree(message));
+        } catch (JsonProcessingException e) {
+            return message;
         }
     }
 }

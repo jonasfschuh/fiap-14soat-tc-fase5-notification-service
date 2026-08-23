@@ -50,7 +50,7 @@ class AuthProxyControllerTest {
     @Test
     @DisplayName("login with configured URL and successful response returns OK")
     void loginWithUrlSuccessReturnsLambdaResponse() {
-        ReflectionTestUtils.setField(controller, "authLambdaUrl", "http://lambda.example.com");
+        ReflectionTestUtils.setField(controller, "authServiceUrl", "http://lambda.example.com");
         AuthLoginRequest request = new AuthLoginRequest("admin", "admin123");
 
         mockServer.expect(requestTo("http://lambda.example.com/auth/login"))
@@ -65,7 +65,7 @@ class AuthProxyControllerTest {
     @Test
     @DisplayName("login with HTTP 401 error returns same status")
     void loginWithHttp401ReturnsUnauthorized() {
-        ReflectionTestUtils.setField(controller, "authLambdaUrl", "http://lambda.example.com");
+        ReflectionTestUtils.setField(controller, "authServiceUrl", "http://lambda.example.com");
         AuthLoginRequest request = new AuthLoginRequest("user", "wrong");
 
         mockServer.expect(requestTo("http://lambda.example.com/auth/login"))
@@ -80,7 +80,7 @@ class AuthProxyControllerTest {
     @Test
     @DisplayName("login with connection failure returns 500")
     void loginWithConnectionFailureReturns500() {
-        ReflectionTestUtils.setField(controller, "authLambdaUrl", "http://lambda.example.com");
+        ReflectionTestUtils.setField(controller, "authServiceUrl", "http://lambda.example.com");
         AuthLoginRequest request = new AuthLoginRequest("admin", "admin123");
 
         mockServer.expect(requestTo("http://lambda.example.com/auth/login"))

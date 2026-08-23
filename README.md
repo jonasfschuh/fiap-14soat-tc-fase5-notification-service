@@ -1,11 +1,11 @@
-# fiap-14soat-tc-fase5-notification-service
+﻿# fiap-14soat-tc-fase5-notification-service
 
 ![Java 21](https://img.shields.io/badge/Java_21-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.4.5-%236DB33F.svg?style=for-the-badge&logo=springboot&logoColor=white)
 ![Swagger](https://img.shields.io/badge/OpenAPI_3-%2385EA2D.svg?style=for-the-badge&logo=swagger&logoColor=black)
 ![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazonwebservices&logoColor=white)
 ![Amazon SES](https://img.shields.io/badge/Amazon_SES_SMTP-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white)
-![LocalStack](https://img.shields.io/badge/LocalStack-%23000000.svg?style=for-the-badge&logo=localstack&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-%23326CE5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
 ![New Relic](https://img.shields.io/badge/New_Relic-%231CE783.svg?style=for-the-badge&logo=newrelic&logoColor=white)
@@ -49,7 +49,7 @@
 
 ## 📋 Descrição
 
-Este repositório contém o **microserviço Notification Service** da plataforma **FIAP X** — responsável por consumir a fila **Amazon SQS `video-events`**, filtrar os eventos `VIDEO_FAILED` e `VIDEO_PROCESSED`, e enviar notificações por e-mail aos usuários.
+Este repositório contém o **microserviço Notification Service** da plataforma **FIAP X** — responsável por consumir a fila **RabbitMQ `video-events`**, filtrar os eventos `VIDEO_FAILED` e `VIDEO_PROCESSED`, e enviar notificações por e-mail aos usuários.
 
 A aplicação utiliza **Spring Boot 3.4.5 + Java 21**, arquitetura hexagonal e não possui banco de dados. O envio de e-mails funciona com:
 
@@ -60,10 +60,10 @@ A aplicação utiliza **Spring Boot 3.4.5 + Java 21**, arquitetura hexagonal e n
 
 | Funcionalidade | Descrição |
 |----------------|-----------|
-| **Consumer SQS** | Consome mensagens da fila `video-events` |
+| **Consumer RabbitMQ** | Consome mensagens da fila `video-events` |
 | **Filtro de eventos** | Notifica sempre `VIDEO_FAILED`; `VIDEO_PROCESSED` depende de `NOTIFY_ON_PROCESSED` |
 | **Notificação SMTP** | Envia e-mails HTML usando `JavaMailSender` |
-| **Auth Proxy** | Expõe `POST /auth/login` para delegar autenticação ao `auth-lambda` |
+| **Auth Proxy** | Expõe `POST /auth/login` para delegar autenticação ao auth-service |
 | **Observabilidade** | Actuator, Swagger/OpenAPI e suporte ao New Relic |
 
 ### Estrutura de Módulos Maven
@@ -72,7 +72,7 @@ A aplicação utiliza **Spring Boot 3.4.5 + Java 21**, arquitetura hexagonal e n
 fiap-14soat-tc-fase5-notification-service/
 ├── application/      → Controllers REST, DTOs, exception handlers, testes BDD (Cucumber)
 ├── domain/           → Modelos, enums, use case, ports e exceções de domínio
-├── infrastructure/   → Adapters SMTP/SQS, configurações AWS, Swagger, scheduling
+├── infrastructure/   → Adapters SMTP/RabbitMQ, configurações, Swagger
 └── report-aggregate/ → Agregador de cobertura JaCoCo
 ```
 
@@ -97,9 +97,9 @@ fiap-14soat-tc-fase5-notification-service/
                           │  Output Port
 ┌─────────────────────────▼──────────────────────────────────┐
 │                  Infrastructure Layer                       │
-│   SqsVideoEventsConsumerAdapter                             │
+│   RabbitVideoEventsConsumerAdapter                          │
 │   SmtpEmailAdapter                                          │
-│   AwsSqsConfiguration │ SwaggerConfiguration                │
+│   RabbitMqConfiguration │ SwaggerConfiguration              │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -108,12 +108,12 @@ fiap-14soat-tc-fase5-notification-service/
 ```text
 [video-processing-service / video-status-service]
                  │
-                 │ publica em SQS
+                 │ publica em RabbitMQ
                  ▼
         [Queue: video-events]
                  │
                  ▼
- [SqsVideoEventsConsumerAdapter] --polling--> [SendNotificationUseCase]
+ [RabbitVideoEventsConsumerAdapter] --listener--> [SendNotificationUseCase]
                  │                               │
                  │                               ├── VIDEO_FAILED ─────► sendFailureEmail()
                  │                               └── VIDEO_PROCESSED ─► sendSuccessEmail() se habilitado
@@ -136,7 +136,7 @@ fiap-14soat-tc-fase5-notification-service/
 │  │ :8087              │─────►│ SMTP :1025 / UI :8025    │  │
 │  └────────────────────┘      └──────────────────────────┘  │
 │              │                                             │
-│              └────────► LocalStack externo (:4566)         │
+│              └────────► RabbitMQ externo (:5672)           │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -158,9 +158,8 @@ fiap-14soat-tc-fase5-notification-service/
 
 | Tecnologia | Ambiente | Uso |
 |------------|----------|-----|
-| **Amazon SQS** | AWS | Consumo da fila `video-events` |
-| **LocalStack** | Local/Docker | Endpoint SQS local compartilhado |
-| **Spring Scheduling** | Todos | Polling controlado da fila |
+| **RabbitMQ** | Local/Docker/K8s | Consumo da fila `video-events` |
+| **Spring AMQP** | Todos | Listener, filas, exchange e DLQ |
 
 ### Email
 
@@ -175,7 +174,7 @@ fiap-14soat-tc-fase5-notification-service/
 | Ferramenta | Uso |
 |------------|-----|
 | **JUnit 5** | Testes unitários |
-| **Mockito 5.x** | Mocks de SMTP, SQS e adapters |
+| **Mockito 5.x** | Mocks de SMTP, RabbitMQ e adapters |
 | **Cucumber 7.18** | Testes BDD |
 | **JaCoCo** | Cobertura mínima de 80% |
 
@@ -254,9 +253,11 @@ docker compose up -d mailhog
 Use as seguintes variáveis no IntelliJ/IDE:
 
 ```text
-AWS_SQS_ENABLED=true
-AWS_ENDPOINT_OVERRIDE=http://localhost:4566
-SQS_QUEUE_VIDEO_EVENTS=http://localhost:4566/000000000000/video-events
+RABBITMQ_HOST=localhost
+RABBITMQ_PORT=5672
+RABBITMQ_VHOST=fiapx
+RABBITMQ_USER=fiapx
+RABBITMQ_PASSWORD=fiapx123
 MAIL_HOST=localhost
 MAIL_PORT=1025
 NOTIFY_ON_PROCESSED=true
@@ -279,17 +280,18 @@ Isso permite validar assunto, corpo HTML e destinatário sem depender de SES.
 | Variável | Exemplo | Uso |
 |----------|---------|-----|
 | `SERVER_PORT` | `8087` | Porta HTTP da aplicação |
-| `AWS_SQS_ENABLED` | `true` | Habilita consumer SQS |
-| `AWS_REGION` | `us-east-1` | Região AWS |
-| `AWS_ENDPOINT_OVERRIDE` | `http://localhost:4566` | Endpoint LocalStack |
-| `SQS_QUEUE_VIDEO_EVENTS` | `http://localhost:4566/000000000000/video-events` | URL da fila |
+| `RABBITMQ_HOST` | `localhost` / `fiap-rabbitmq` | Host do RabbitMQ |
+| `RABBITMQ_PORT` | `5672` | Porta AMQP |
+| `RABBITMQ_VHOST` | `fiapx` | Virtual host |
+| `RABBITMQ_USER` | `fiapx` | Usuário do RabbitMQ |
+| `RABBITMQ_PASSWORD` | `fiapx123` | Senha do RabbitMQ |
 | `MAIL_HOST` | `mailhog` / `email-smtp.us-east-1.amazonaws.com` | SMTP |
 | `MAIL_PORT` | `1025` / `587` | Porta SMTP |
 | `MAIL_USERNAME` | `smtp-user` | Usuário SES |
 | `MAIL_PASSWORD` | `smtp-password` | Senha SES |
 | `MAIL_FROM` | `noreply@fiapx.com` | Remetente |
 | `NOTIFY_ON_PROCESSED` | `true` | Habilita e-mail para `VIDEO_PROCESSED` |
-| `AUTH_LAMBDA_URL` | `https://...execute-api...amazonaws.com` | Proxy de autenticação |
+| `AUTH_SERVICE_URL` | `http://localhost:8090` | Proxy de autenticação |
 | `NEW_RELIC_LICENSE_KEY` | `xxxx` | APM |
 
 ---
@@ -356,6 +358,104 @@ report-aggregate/target/site/jacoco-aggregate/index.html
 | 8 | [fiap-14soat-tc-fase5-observability](https://github.com/jonasfschuh/fiap-14soat-tc-fase5-observability) | Prometheus + Grafana + observabilidade |
 
 ---
+
+
+---
+
+## ⚙️ CI/CD — Configurando o Self-Hosted Runner
+
+O pipeline de deploy deste repositório utiliza um **GitHub Actions self-hosted runner** rodando na máquina local com acesso ao cluster Kubernetes (Docker Desktop).
+
+### Pré-requisitos do runner
+
+Certifique-se de que a máquina possui instalado:
+
+| Ferramenta | Versão mínima | Verificar |
+|-----------|---------------|-----------|
+| Docker Desktop (com K8s habilitado) | 4.x+ | `docker version` |
+| kubectl | 1.28+ | `kubectl version --client` |
+| Java 21 (JDK) | 21+ | `java -version` |
+| Maven Wrapper | — | `.\mvnw.cmd -version` |
+
+> Para o repositório IAC, também é necessário `terraform` (1.5+) e `helm` (3.x+).
+
+### Passo a passo — configurar o runner
+
+#### 1. Acesse as configurações do repositório no GitHub
+
+```
+GitHub → Repositório → Settings → Actions → Runners → New self-hosted runner
+```
+
+#### 2. Escolha o sistema operacional
+
+Selecione **Windows** e a arquitetura **x64**.
+
+#### 3. Baixe e configure o runner
+
+Execute os comandos exibidos pelo GitHub na sua máquina local (PowerShell como Administrador):
+
+```powershell
+# Criar pasta para o runner (ajuste o caminho se necessário)
+mkdir C:\actions-runner; cd C:\actions-runner
+
+# Baixar o runner (substitua a URL pela exibida no GitHub)
+Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/vX.X.X/actions-runner-win-x64-X.X.X.zip -OutFile actions-runner.zip
+
+# Extrair
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory("$PWD\actions-runner.zip", "$PWD")
+
+# Configurar (use o token gerado pelo GitHub na tela de configuração)
+.\config.cmd --url https://github.com/<org>/<repo> --token <TOKEN-GERADO-PELO-GITHUB>
+```
+
+#### 4. Instalar como serviço Windows (recomendado)
+
+```powershell
+# Instalar e iniciar como serviço Windows (executa automaticamente no boot)
+.\svc.cmd install
+.\svc.cmd start
+
+# Verificar status
+.\svc.cmd status
+```
+
+#### 5. Verificar o runner no GitHub
+
+```
+GitHub → Repositório → Settings → Actions → Runners
+```
+
+O runner deve aparecer com status **Idle** (verde). A partir daí, qualquer push para `main` ou `develop` disparará o pipeline de deploy automaticamente.
+
+### Verificar o deploy após o pipeline
+
+```powershell
+# Listar pods no namespace fiapx
+kubectl get pods -n fiapx
+
+# Verificar logs do serviço
+kubectl logs -l app=<nome-do-app> -n fiapx --tail=50
+
+# Acessar via Swagger (após NGINX Ingress estar ativo)
+# http://localhost/<caminho>/swagger-ui.html
+```
+
+### Gerenciar o runner
+
+```powershell
+# Parar o serviço
+.\svc.cmd stop
+
+# Remover o serviço
+.\svc.cmd uninstall
+
+# Remover o runner do GitHub
+.\config.cmd remove --token <TOKEN>
+```
+
+> 💡 **Dica:** Para múltiplos repositórios, crie uma pasta separada para cada runner (ex: `C:\actions-runner\auth`, `C:\actions-runner\upload`) e repita o processo para cada um.
 
 <div align="center">
 

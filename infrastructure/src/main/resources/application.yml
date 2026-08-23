@@ -9,6 +9,12 @@ spring:
     properties:
       mail.smtp.auth: false
       mail.smtp.starttls.enable: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    virtual-host: ${RABBITMQ_VHOST:fiapx}
+    username: ${RABBITMQ_USER:fiapx}
+    password: ${RABBITMQ_PASSWORD:fiapx123}
 server:
   port: ${SERVER_PORT:8087}
 
@@ -26,19 +32,7 @@ management:
 app:
   notification:
     from-email: ${MAIL_FROM:noreply@fiapx.com}
-    notify-on-processed: ${NOTIFY_ON_PROCESSED:false}
-
-aws:
-  region: ${AWS_REGION:us-east-1}
-  access-key-id: ${AWS_ACCESS_KEY_ID:test}
-  secret-access-key: ${AWS_SECRET_ACCESS_KEY:test}
-  endpoint-override: ${AWS_ENDPOINT_OVERRIDE:}
-  sqs:
-    enabled: ${AWS_SQS_ENABLED:false}
-    polling:
-      fixed-delay-ms: ${AWS_SQS_POLLING_DELAY_MS:3000}
-    queues:
-      video-events: ${SQS_QUEUE_VIDEO_EVENTS:http://localhost:4566/000000000000/video-events}
+    notify-on-processed: ${NOTIFY_ON_PROCESSED:true}
 
 logging:
   level:
@@ -46,8 +40,8 @@ logging:
     org.springframework: WARN
 
 auth:
-  lambda:
-    url: ${AUTH_LAMBDA_URL:}
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8090}
 
 springdoc:
   api-docs:
@@ -67,17 +61,35 @@ spring:
       mail.smtp.auth: false
       mail.smtp.starttls.enable: false
 
-aws:
-  sqs:
-    enabled: false
+---
+# Profile para desenvolvimento local (IDE).
+# Pré-requisito: expor serviços K8s com port-forward:
+#   kubectl port-forward svc/mailhog   1025:1025 -n fiapx
+#   kubectl port-forward svc/rabbitmq  5672:5672 -n fiapx
+spring:
+  config:
+    activate:
+      on-profile: local
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: fiapx
+    username: fiapx
+    password: fiapx123
 
 ---
 spring:
   config:
     activate:
       on-profile: docker
-
-aws:
-  sqs:
-    enabled: ${AWS_SQS_ENABLED:true}
-  endpoint-override: ${AWS_ENDPOINT_OVERRIDE:http://fiap-localstack:4566}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:fiap-rabbitmq}
+  mail:
+    host: ${MAIL_HOST:fiap-mailhog}
+    port: ${MAIL_PORT:1025}

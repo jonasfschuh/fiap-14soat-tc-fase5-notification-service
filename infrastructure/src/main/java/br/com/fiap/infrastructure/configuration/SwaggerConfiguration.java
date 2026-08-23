@@ -17,8 +17,8 @@ import java.util.List;
 @Configuration
 public class SwaggerConfiguration {
 
-    @Value("${auth.lambda.url:}")
-    private String authLambdaUrl = "";
+    @Value("${auth.service.url:}")
+    private String authServiceUrl = "";
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -40,7 +40,7 @@ public class SwaggerConfiguration {
                                 FIAP - 14 SOAT - Arquitetura de Software (Turma Outubro de 2025)
                                 Tech Challenge - Fase 5 (Hackathon)
 
-                                Worker assíncrono — consome SQS video-events e envia notificações
+                                Worker assíncrono — consome RabbitMQ video-events e envia notificações
                                 por e-mail para eventos VIDEO_FAILED e VIDEO_PROCESSED.
 
                                 **Como autenticar:**
@@ -54,12 +54,12 @@ public class SwaggerConfiguration {
     @Bean
     public OpenApiCustomizer authLoginServerOverride() {
         return openApi -> {
-            if (!StringUtils.hasText(authLambdaUrl) || openApi.getPaths() == null) {
+            if (!StringUtils.hasText(authServiceUrl) || openApi.getPaths() == null) {
                 return;
             }
             var authPath = openApi.getPaths().get("/auth/login");
             if (authPath != null) {
-                authPath.servers(List.of(new Server().url(authLambdaUrl).description("Auth Lambda — API Gateway")));
+                authPath.servers(List.of(new Server().url(authServiceUrl).description("Auth Service")));
             }
         };
     }

@@ -12,6 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -21,53 +23,42 @@ class RabbitVideoEventsConsumerAdapterTest {
     @Mock
     private SendNotificationInputPort sendNotificationInputPort;
 
-    @Mock
     private ObjectMapper objectMapper;
 
     private RabbitVideoEventsConsumerAdapter adapter;
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
         adapter = new RabbitVideoEventsConsumerAdapter(sendNotificationInputPort, objectMapper);
     }
 
     @Test
-    void shouldSendNotificationWhenMessageIsValid() throws Exception {
-        String message = "{\"videoId\":\"1\"}";
-        VideoNotificationEvent event = new VideoNotificationEvent();
-        event.setVideoId("1");
-        event.setEventType("VIDEO_FAILED");
+    void shouldSendNotificationWhenMessageIsValid() {
+        String message = "{\"videoId\":\"1\",\"eventType\":\"VIDEO_FAILED\"}";
+        when(sendNotificationInputPort.send(any(VideoNotificationEvent.class))).thenReturn(new NotificationResult(true, "ok"));
 
-        when(objectMapper.readValue(message, VideoNotificationEvent.class)).thenReturn(event);
-        when(sendNotificationInputPort.send(event)).thenReturn(new NotificationResult(true, "ok"));
+        assertDoesNotThrow(() -> adapter.onVideoEvent(message, "video.events", "video.uploaded"));
 
-        assertDoesNotThrow(() -> adapter.onVideoEvent(message));
-
-        verify(sendNotificationInputPort).send(event);
+        verify(sendNotificationInputPort).send(argThat(event ->
+                "1".equals(event.getVideoId()) && "VIDEO_FAILED".equals(event.getEventType())));
     }
 
     @Test
-    void shouldNotThrowWhenNotificationFails() throws Exception {
-        String message = "{\"videoId\":\"1\"}";
-        VideoNotificationEvent event = new VideoNotificationEvent();
-        event.setVideoId("1");
-        event.setEventType("VIDEO_FAILED");
+    void shouldNotThrowWhenNotificationFails() {
+        String message = "{\"videoId\":\"1\",\"eventType\":\"VIDEO_FAILED\"}";
+        when(sendNotificationInputPort.send(any(VideoNotificationEvent.class))).thenReturn(new NotificationResult(false, "smtp failure"));
 
-        when(objectMapper.readValue(message, VideoNotificationEvent.class)).thenReturn(event);
-        when(sendNotificationInputPort.send(event)).thenReturn(new NotificationResult(false, "smtp failure"));
+        assertDoesNotThrow(() -> adapter.onVideoEvent(message, "video.events", "video.failed"));
 
-        assertDoesNotThrow(() -> adapter.onVideoEvent(message));
-
-        verify(sendNotificationInputPort).send(event);
+        verify(sendNotificationInputPort).send(argThat(event ->
+                "1".equals(event.getVideoId()) && "VIDEO_FAILED".equals(event.getEventType())));
     }
 
     @Test
-    void shouldThrowWhenMessageProcessingFails() throws Exception {
-        String message = "{\"videoId\":\"1\"}";
+    void shouldThrowWhenMessageProcessingFails() {
+        String message = "{invalid-json}";
 
-        when(objectMapper.readValue(message, VideoNotificationEvent.class))
-                .thenThrow(new RuntimeException("invalid payload"));
-
-        assertThrows(RuntimeException.class, () -> adapter.onVideoEvent(message));
+        assertThrows(RuntimeException.class, () -> adapter.onVideoEvent(message, "video.events", "video.uploaded"));
     }
 }

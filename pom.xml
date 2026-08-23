@@ -101,7 +101,7 @@
                                     </rules>
                                     <excludes>
                                         <exclude>**/NotificationApplication.class</exclude>
-                                        <exclude>**/AwsSqsConfiguration.class</exclude>
+                                        <exclude>**/RabbitMqConfiguration.class</exclude>
                                         <exclude>**/SwaggerConfiguration.class</exclude>
                                         <exclude>**/NotificationBeanConfiguration.class</exclude>
                                         <exclude>**/SchedulingConfiguration.class</exclude>

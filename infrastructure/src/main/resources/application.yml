@@ -62,28 +62,6 @@ spring:
       mail.smtp.starttls.enable: false
 
 ---
-# Profile para desenvolvimento local (IDE).
-# Pré-requisito: expor serviços K8s com port-forward:
-#   kubectl port-forward svc/mailhog   1025:1025 -n fiapx
-#   kubectl port-forward svc/rabbitmq  5672:5672 -n fiapx
-spring:
-  config:
-    activate:
-      on-profile: local
-  mail:
-    host: localhost
-    port: 1025
-    properties:
-      mail.smtp.auth: false
-      mail.smtp.starttls.enable: false
-  rabbitmq:
-    host: localhost
-    port: 5672
-    virtual-host: fiapx
-    username: fiapx
-    password: fiapx123
-
----
 spring:
   config:
     activate:

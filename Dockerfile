@@ -1,8 +1,11 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 COPY . .
-RUN chmod +x mvnw
-RUN ./mvnw clean package -DskipTests
+# 'sh mvnw' evita depender do shebang/bit executavel do mvnw, que pode ser
+# perdido em checkouts de runners Windows. O sed remove CR residual (CRLF)
+# que quebraria o script shell caso o arquivo tenha sido checked out com
+# quebras de linha do Windows.
+RUN sed -i 's/\r$//' mvnw && sh mvnw clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 

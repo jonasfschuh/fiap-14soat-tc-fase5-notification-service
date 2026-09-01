@@ -59,7 +59,7 @@ public class AuthProxyController {
         }
         try {
             ResponseEntity<Object> response = restTemplate.postForEntity(
-                    authServiceUrl + "/auth/login",
+                    authServiceUrl + "/login",
                     request,
                     Object.class
             );

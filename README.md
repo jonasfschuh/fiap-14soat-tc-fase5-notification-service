@@ -34,6 +34,7 @@
 - [🧪 Testes](#-testes)
 - [🎬 Vídeos de Apresentação](#-vídeos-de-apresentação)
 - [🔗 Repositórios Relacionados](#-repositórios-relacionados)
+- [🔍 Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -359,6 +360,31 @@ report-aggregate/target/site/jacoco-aggregate/index.html
 
 ---
 
+
+---
+
+## 🔍 Troubleshooting
+
+### `/actuator/prometheus` retorna `NoResourceFoundException` (404/500)
+
+**Causa raiz:** a dependência `micrometer-registry-prometheus` estava ausente no módulo `application`.
+
+O `spring-boot-starter-actuator` expõe o endpoint `/actuator/prometheus` **somente se** o `micrometer-registry-prometheus` estiver no classpath — sem ele, o endpoint não é registrado pelo `PrometheusMetricsExportAutoConfiguration` e a requisição cai no handler de recursos estáticos, resultando em:
+
+```
+NoResourceFoundException: No static resource actuator/prometheus.
+```
+
+**Solução:** a dependência foi adicionada em `application/pom.xml`:
+
+```xml
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-registry-prometheus</artifactId>
+</dependency>
+```
+
+> ℹ️ O auth-service já está em execução e validado com essa correção aplicada.
 
 ---
 

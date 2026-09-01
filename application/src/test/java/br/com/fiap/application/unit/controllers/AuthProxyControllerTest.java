@@ -53,7 +53,7 @@ class AuthProxyControllerTest {
         ReflectionTestUtils.setField(controller, "authServiceUrl", "http://lambda.example.com");
         AuthLoginRequest request = new AuthLoginRequest("admin", "admin123");
 
-        mockServer.expect(requestTo("http://lambda.example.com/auth/login"))
+        mockServer.expect(requestTo("http://lambda.example.com/login"))
                 .andRespond(withSuccess("{\"token\":\"jwt-token\"}", MediaType.APPLICATION_JSON));
 
         ResponseEntity<Object> response = controller.login(request);
@@ -68,7 +68,7 @@ class AuthProxyControllerTest {
         ReflectionTestUtils.setField(controller, "authServiceUrl", "http://lambda.example.com");
         AuthLoginRequest request = new AuthLoginRequest("user", "wrong");
 
-        mockServer.expect(requestTo("http://lambda.example.com/auth/login"))
+        mockServer.expect(requestTo("http://lambda.example.com/login"))
                 .andRespond(withUnauthorizedRequest());
 
         ResponseEntity<Object> response = controller.login(request);
@@ -83,7 +83,7 @@ class AuthProxyControllerTest {
         ReflectionTestUtils.setField(controller, "authServiceUrl", "http://lambda.example.com");
         AuthLoginRequest request = new AuthLoginRequest("admin", "admin123");
 
-        mockServer.expect(requestTo("http://lambda.example.com/auth/login"))
+        mockServer.expect(requestTo("http://lambda.example.com/login"))
                 .andRespond(withException(new java.io.IOException("Connection refused")));
 
         ResponseEntity<Object> response = controller.login(request);

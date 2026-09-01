@@ -43,6 +43,10 @@ auth:
   service:
     url: ${AUTH_SERVICE_URL:http://localhost:8090}
 
+swagger:
+  server:
+    url: ${SWAGGER_SERVER_URL:/}
+
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -71,3 +75,21 @@ spring:
   mail:
     host: ${MAIL_HOST:fiap-mailhog}
     port: ${MAIL_PORT:1025}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: k8s
+
+# O ingress reescreve /notify(/|$)(.*) -> /$2, entao o app recebe as
+# requisicoes sem o prefixo /notify. O Swagger UI roda no browser e
+# precisa dos paths completos (com prefixo) para que o ingress roteie
+# corretamente as chamadas de api-docs/config feitas pelo JS da pagina.
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    config-url: /notify/v3/api-docs/swagger-config
+    url: /notify/v3/api-docs
+

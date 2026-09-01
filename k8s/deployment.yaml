@@ -2,6 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: notification-api
+  namespace: fiapx
+  labels:
+    app: notification-api
 spec:
   replicas: 1
   selector:
@@ -11,6 +14,11 @@ spec:
     metadata:
       labels:
         app: notification-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "8087"
+        prometheus.io/scheme: "http"
     spec:
       containers:
         - name: notification-api
@@ -21,6 +29,10 @@ spec:
           env:
             - name: SERVER_PORT
               value: "8087"
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s
+            - name: SWAGGER_SERVER_URL
+              value: "/notify"
             - name: RABBITMQ_HOST
               valueFrom:
                 configMapKeyRef:
@@ -38,48 +50,69 @@ spec:
                   key: RABBITMQ_VHOST
             - name: RABBITMQ_USER
               valueFrom:
-                configMapKeyRef:
-                  name: rabbitmq-config
+                secretKeyRef:
+                  name: rabbitmq-secret
                   key: RABBITMQ_USER
             - name: RABBITMQ_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  name: rabbitmq-config
+                secretKeyRef:
+                  name: rabbitmq-secret
                   key: RABBITMQ_PASSWORD
             - name: MAIL_HOST
               valueFrom:
                 configMapKeyRef:
-                  name: notification-config
+                  name: mail-config
                   key: MAIL_HOST
             - name: MAIL_PORT
               valueFrom:
                 configMapKeyRef:
-                  name: notification-config
+                  name: mail-config
                   key: MAIL_PORT
             - name: MAIL_FROM
               valueFrom:
                 configMapKeyRef:
-                  name: notification-config
+                  name: mail-config
                   key: MAIL_FROM
             - name: AUTH_SERVICE_URL
               valueFrom:
                 configMapKeyRef:
-                  name: notification-config
+                  name: rabbitmq-config
                   key: AUTH_SERVICE_URL
             - name: NOTIFY_ON_PROCESSED
               valueFrom:
                 configMapKeyRef:
                   name: notification-config
                   key: NOTIFY_ON_PROCESSED
-          readinessProbe:
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          startupProbe:
             httpGet:
-              path: /actuator/health/readiness
+              path: /actuator/health
               port: 8087
-            initialDelaySeconds: 20
-            periodSeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 60
+
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8087
-            initialDelaySeconds: 30
-            periodSeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8087
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 6

@@ -83,6 +83,12 @@ spec:
                 configMapKeyRef:
                   name: notification-config
                   key: NOTIFY_ON_PROCESSED
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: newrelic-secret
+                  key: NEW_RELIC_LICENSE_KEY
+                  optional: true
 
           resources:
             requests:
